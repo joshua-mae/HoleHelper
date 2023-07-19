@@ -1,7 +1,5 @@
 package provide holehelper 1.0
 
-#PBC wrap ruins the whole system when wrapping, need to load in the system after everything is done
-
 namespace eval ::HOLEHelper:: {
     variable w
     variable primarypdb
@@ -10,8 +8,8 @@ namespace eval ::HOLEHelper:: {
     variable dcd_step
 	variable mol_sel
 	variable wrapping_condition
-	variable output_pdb
-	variable sphere_directory
+	# variable output_pdb
+	# variable sphere_directory
 	variable primarycvec_x
 	variable primarycvec_y
 	variable primarycvec_z
@@ -20,28 +18,30 @@ namespace eval ::HOLEHelper:: {
 	variable primarycpnt_x
 	variable primarycpnt_y
 	variable primarycpnt_z
-
+    variable output_dir
 } 
 
 
 proc ::HOLEHelper::holehelper {} {
     variable w
-    variable primarypdb
-    variable primarypsf
-    variable primarydcd
-    variable dcd_step
-	variable mol_sel
-	variable wrapping_condition
-	variable output_pdb
-	variable sphere_directory
-	variable primarycvec_x
-	variable primarycvec_y
-	variable primarycvec_z
-	variable radius
+    variable primarypdb ".pdb"
+    variable primarypsf ".psf"
+    variable primarydcd ".dcd"
+    variable dcd_step "100"
+	variable mol_sel "segname 6 7 8 9 10 11"
+	variable wrapping_condition "segname 11"
+	# variable output_pdb
+	# variable sphere_directory
+	variable primarycvec_x 0
+	variable primarycvec_y 0
+	variable primarycvec_z 1
+	variable radius "simple2"
 	variable endrad
 	variable primarycpnt_x
 	variable primarycpnt_y
 	variable primarycpnt_z
+    set user [exec whoami]
+    variable output_dir "/home/$user"
 
 
     if { [winfo exists .holehelper] } {
@@ -54,7 +54,7 @@ proc ::HOLEHelper::holehelper {} {
     grid columnconfigure $w 0 -weight 1
     grid rowconfigure $w 0 -weight 1
 
-    wm geometry $w 510x460
+    wm geometry $w 510x500
 
     set file_window $w.fileoptions
     ttk::labelframe $file_window -borderwidth 2 -relief ridge -text "File Options"
@@ -119,7 +119,7 @@ proc ::HOLEHelper::holehelper {} {
 	grid columnconfigure $mol_window.molsel 1 -weight 1
 	
     frame $mol_window.wrapping
-    grid [label $mol_window.wrapping.wraplabel -text "PBC Wraping Condition: "] \
+    grid [label $mol_window.wrapping.wraplabel -text "PBC Wraping Condition (Centersel): "] \
     -row 1 -column 0 -sticky e
     grid [entry $mol_window.wrapping.wrappath -textvariable \
     ::HOLEHelper::wrapping_condition -width 70 -justify left] -row 1 -column 1
@@ -133,26 +133,25 @@ proc ::HOLEHelper::holehelper {} {
     ttk::labelframe $inp_window -borderwidth 2 -relief ridge -text "INP File Options"
 	ttk::style configure TLabelframe.Label -font bold
 
-    frame $inp_window.temppdb
-    grid [label $inp_window.temppdb.tpdblabel -text "Output PDB File Name: "] \
-    -row 1 -column 0 -sticky e
-    grid [entry $inp_window.temppdb.tpdbpath -textvariable \
-    ::HOLEHelper::output_pdb -width 70 -justify left] -row 1 -column 1
-	grid columnconfigure $inp_window.temppdb 1 -weight 1
+    # frame $inp_window.temppdb
+    # grid [label $inp_window.temppdb.tpdblabel -text "Output PDB File Name: "] \
+    # -row 1 -column 0 -sticky e
+    # grid [entry $inp_window.temppdb.tpdbpath -textvariable \
+    # ::HOLEHelper::output_pdb -width 70 -justify left] -row 1 -column 1
+	# grid columnconfigure $inp_window.temppdb 1 -weight 1
 	
-
-    frame $inp_window.sphere
-    grid [label $inp_window.sphere.sphlabel -text "SPH Ouput File Path: "] \
-    -row 1 -column 0 -sticky e
-    grid [entry $inp_window.sphere.sphpath -textvariable \
-    ::HOLEHelper::sphere_directory -width 70 -justify left] -row 1 -column 1
-	grid columnconfigure $inp_window.sphere 1 -weight 1
+    # frame $inp_window.sphere
+    # grid [label $inp_window.sphere.sphlabel -text "SPH Ouput File Path: "] \
+    # -row 1 -column 0 -sticky e
+    # grid [entry $inp_window.sphere.sphpath -textvariable \
+    # ::HOLEHelper::sphere_directory -width 70 -justify left] -row 1 -column 1
+	# grid columnconfigure $inp_window.sphere 1 -weight 1
 	
 	frame $inp_window.cvect
 	pack [label $inp_window.cvect.cvlabel -text "Center Vector (x,y,z): " ] -side left
-	pack [entry $inp_window.cvect.x -width 15 -textvariable HOLEHelper::primarycvec_x] -side left
-	pack [entry $inp_window.cvect.y -width 15 -textvariable HOLEHelper::primarycvec_y] -side left
-	pack [entry $inp_window.cvect.z -width 15 -textvariable HOLEHelper::primarycvec_z] -side left
+	pack [entry $inp_window.cvect.x -width 16 -textvariable HOLEHelper::primarycvec_x] -side left
+	pack [entry $inp_window.cvect.y -width 16 -textvariable HOLEHelper::primarycvec_y] -side left
+	pack [entry $inp_window.cvect.z -width 16 -textvariable HOLEHelper::primarycvec_z] -side left
 	
 	frame $inp_window.rad
 	grid [label $inp_window.rad.radlabel -text "RAD File Type:"] \
@@ -175,9 +174,11 @@ proc ::HOLEHelper::holehelper {} {
 	
 	frame $inp_window.cpnt
 	pack [label $inp_window.cpnt.cpntlabel -text "Center Point (x,y,z):  " ] -side left
-	pack [entry $inp_window.cpnt.x -width 15 -textvariable HOLEHelper::primarycpnt_x] -side left
-	pack [entry $inp_window.cpnt.y -width 15 -textvariable HOLEHelper::primarycpnt_y] -side left
-	pack [entry $inp_window.cpnt.z -width 15 -textvariable HOLEHelper::primarycpnt_z] -side left
+	pack [entry $inp_window.cpnt.x -width 12 -textvariable HOLEHelper::primarycpnt_x] -side left
+	pack [entry $inp_window.cpnt.y -width 12 -textvariable HOLEHelper::primarycpnt_y] -side left
+	pack [entry $inp_window.cpnt.z -width 12 -textvariable HOLEHelper::primarycpnt_z] -side left
+    pack [button $inp_window.cpnt.cpntbutton -text "Simulate" \
+    -command { puts "This is simulating something"}] \
 	
     frame $inp_window.edrad
     grid [label $inp_window.edrad.endlabel -text "Endrad: "] \
@@ -186,30 +187,51 @@ proc ::HOLEHelper::holehelper {} {
     ::HOLEHelper::endrad -width 70 -justify left] -row 1 -column 1
 	grid columnconfigure $inp_window.edrad 1 -weight 1
 	
-	
 	pack $inp_window -side top -pady 5 -padx 3 -fill x -anchor w
-	pack $inp_window.temppdb $inp_window.sphere $inp_window.rad $inp_window.cvect $inp_window.optional $inp_window.cpnt $inp_window.edrad \
+	pack $inp_window.cvect $inp_window.rad $inp_window.optional $inp_window.cpnt $inp_window.edrad \
 		-side top -padx 0 -pady 2 -expand 1 -fill x
 	
+    #-------------------------------------------------------------------------
+    set output_window $w.outputdir
+    ttk::labelframe $output_window -borderwidth 2 -relief ridge -text "Output"
+	ttk::style configure TLabelframe.Label -font bold
+
+    frame $output_window.files
+    grid [label $output_window.files.filelabel -text "Output Directory: "] \
+    -row 0 -column 0 -sticky e
+    grid [entry $output_window.files.filepath -textvariable \
+    ::HOLEHelper::output_dir -width 70 -justify left] -row 0 -column 1
+    grid [button $output_window.files.filebutton -text "Browse" \
+    -command {
+        set tempfile [tk_chooseDirectory]
+	if {![string equal $tempfile ""]} {set ::HOLEHelper::output_dir $tempfile}
+	}] -row 0 -column 2 -sticky w
+	grid columnconfigure $output_window.files 1 -weight 1
+
+	pack $output_window -side top -pady 5 -padx 3 -fill x -anchor w
+	pack $output_window.files -side top -padx 0 -pady 2 -expand 1 -fill x
+
+	#-------------------------------------------------------------------------
     pack [button $w.running -text "Run HOLE2" -command ::HOLEHelper::run_hole2] \
     -side top -pady 5 -padx 3 -fill x -anchor w
 	
     pack [button $w.loaded -text "Run HOLE2 On Top Mol" -command ::HOLEHelper::loaded_hole] \
     -side top -pady 5 -padx 3 -fill x -anchor w
 	#-------------------------------------------------------------------------
-
 }
 
 proc ::HOLEHelper::run_hole2 {} {
-
+    global env
+    set hh_path "$env(HOLEHELPERDIR)"
+    set user [exec whoami]
     variable primarypdb
     variable primarypsf
     variable primarydcd
     variable dcd_step
 	variable mol_sel
 	variable wrapping_condition
-	variable output_pdb
-	variable sphere_directory
+	# variable output_pdb
+	# variable sphere_directory
 	variable primarycvec_x
 	variable primarycvec_y
 	variable primarycvec_z
@@ -218,14 +240,75 @@ proc ::HOLEHelper::run_hole2 {} {
 	variable primarycpnt_x
 	variable primarycpnt_y
 	variable primarycpnt_z
+    variable output_dir
 	
-	puts "This is the text"
+	error_checker $primarypdb $primarypsf $primarydcd $dcd_step $primarycvec_x \
+    $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
+    $endrad $output_dir
+    
+    cd $output_dir
+    file mkdir HH-Results
+    cd HH-Results
+    file mkdir pdb-folder
+    file mkdir inp-folder
+    file mkdir sph-folder
+    file mkdir logs-folder
+
+    puts "This function only runs when there are no errors"
+    puts $hh_path
 
 }
 
 proc ::HOLEHelper::loaded_hole {} {
 
 	puts "This is for loaded HOLE"
+}
+
+proc ::HOLEHelper::error_checker {pdb psf dcd step cvx cvy cvz cpx cpy cpz ed outdir} {
+
+    if {[file extension $pdb] != ".pdb"} {
+        error "Needs proper pdb file"
+    } 
+    if {[file extension $psf] != ".psf"} {
+        error "Needs proper psf file"
+    } 
+    if {[file extension $dcd] != ".dcd"} {
+        error "Needs proper dcd file"
+    } 
+    if {[string is double -strict $step] != 1} {
+        error "Needs proper dcd step input"
+    } 
+    if {[string is double -strict $cvx] != 1} {
+        error "Needs proper x vector"
+    } 
+    if {[string is double -strict $cvy] != 1} {
+        error "Needs proper y vector"
+    } 
+    if {[string is double -strict $cvz] != 1} {
+        error "Needs proper z vector"
+    } 
+    if {($cpx != "") || ($cpy != "") || ($cpz != "")} {
+        if {[string is double -strict $cpx] != 1} {
+            error "Needs proper x center"
+        } 
+        if {[string is double -strict $cpy] != 1} {
+            error "Needs proper y center"
+        } 
+        if {[string is double -strict $cpz] != 1} {
+            error "Needs proper x center"
+        } 
+    }
+    if {$ed != ""}    {    
+        if {[string is double -strict $ed] != 1} {
+        error "Needs proper end radius"
+        } 
+    }
+    if {[file isdirectory $outdir] != 1} {
+        error "Needs proper output directory"
+    } 
+
+    # Find method to check for a correct mol sel and wrapping
+
 }
 
 proc holehelper_tk_cb {} {
