@@ -242,20 +242,20 @@ proc ::HOLEHelper::run_hole2 {} {
 	variable primarycpnt_z
     variable output_dir
 	
-	error_checker $primarypdb $primarypsf $primarydcd $dcd_step $primarycvec_x \
+	error_checker $primarypdb $primarypsf $primarydcd $dcd_step $mol_sel $wrapping_condition $primarycvec_x \
     $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
     $endrad $output_dir
     
-    cd $output_dir
-    file mkdir HH-Results
-    cd HH-Results
-    file mkdir pdb-folder
-    file mkdir inp-folder
-    file mkdir sph-folder
-    file mkdir logs-folder
+    # cd $output_dir
+    # file mkdir HH-Results
+    # cd HH-Results
+    # file mkdir pdb-folder
+    # file mkdir inp-folder
+    # file mkdir sph-folder
+    # file mkdir logs-folder
 
     puts "This function only runs when there are no errors"
-    puts $hh_path
+    # puts $hh_path
 
 }
 
@@ -264,7 +264,7 @@ proc ::HOLEHelper::loaded_hole {} {
 	puts "This is for loaded HOLE"
 }
 
-proc ::HOLEHelper::error_checker {pdb psf dcd step cvx cvy cvz cpx cpy cpz ed outdir} {
+proc ::HOLEHelper::error_checker {pdb psf dcd step molsel pbccond cvx cvy cvz cpx cpy cpz ed outdir} {
 
     if {[file extension $pdb] != ".pdb"} {
         error "Needs proper pdb file"
@@ -278,6 +278,17 @@ proc ::HOLEHelper::error_checker {pdb psf dcd step cvx cvy cvz cpx cpy cpz ed ou
     if {[string is double -strict $step] != 1} {
         error "Needs proper dcd step input"
     } 
+    set mol [atomselect top "$molsel"]
+    if {[$mol num] == 0} {
+        error "Needs real selection"
+    } 
+    if {$pbccond != ""} {
+        set pbcmol [atomselect top $pbccond]
+
+        if {[$pbcmol get mass] < 0} {
+            error "The center of the pbc wrap needs to have a + center of mass"
+        }
+    }
     if {[string is double -strict $cvx] != 1} {
         error "Needs proper x vector"
     } 
@@ -306,9 +317,6 @@ proc ::HOLEHelper::error_checker {pdb psf dcd step cvx cvy cvz cpx cpy cpz ed ou
     if {[file isdirectory $outdir] != 1} {
         error "Needs proper output directory"
     } 
-
-    # Find method to check for a correct mol sel and wrapping
-
 }
 
 proc holehelper_tk_cb {} {

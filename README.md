@@ -23,7 +23,7 @@ This plugin was made so users could utilize HOLE without having to go through th
 **GUI Version**
 This version is meant to only handle one "hole" in which the user can load it directly through the GUI or from a loaded molecule that is the top molecule in VMD.  Additionally, it does come with some other bells and whistles like seeing where the HOLE program will originate and an easier to follow workflow. 
 
-Sections: \
+**Sections:** \
 **File Options:**
 - Input the necessary files here which should be in the combination of either a single pdb file for single frame HOLE calculations or a psf and dcd file with an indicated step size (all three is redundant but the program can handle it). 
 
@@ -32,7 +32,7 @@ Sections: \
 - The mol selection can be anything that isolates the current hole such as: segname 6 7 8 9 10 11
 - The wrapping condition should be the protein in which you want pbc to wrap around (centersel)
     - The condition will go into the wrapping statement like so: 
-    - `pbc wrap -first first -last last -centersel "wrapping condition input" -compound fragment -center com` 
+- `pbc wrap -first first -last last -centersel "wrapping condition input" -compound fragment -center com` 
 
 **INP File Options:**
 - This is where the inputs for the INP file that the bash HOLE operation uses to make this program run faster than the other solutions currently. 
