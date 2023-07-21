@@ -246,13 +246,13 @@ proc ::HOLEHelper::run_hole2 {} {
     $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
     $endrad $output_dir
     
-    # cd $output_dir
-    # file mkdir HH-Results
-    # cd HH-Results
-    # file mkdir pdb-folder
-    # file mkdir inp-folder
-    # file mkdir sph-folder
-    # file mkdir logs-folder
+    cd $output_dir
+    file mkdir HH-Results
+    cd HH-Results
+    file mkdir pdb-folder
+    file mkdir inp-folder
+    file mkdir sph-folder
+    file mkdir logs-folder
 
     puts "This function only runs when there are no errors"
     # puts $hh_path
@@ -284,7 +284,6 @@ proc ::HOLEHelper::error_checker {pdb psf dcd step molsel pbccond cvx cvy cvz cp
     } 
     if {$pbccond != ""} {
         set pbcmol [atomselect top $pbccond]
-
         if {[$pbcmol get mass] < 0} {
             error "The center of the pbc wrap needs to have a + center of mass"
         }
