@@ -2,6 +2,8 @@ package provide holehelper 1.0
 
 namespace eval ::HOLEHelper:: {
     variable w
+    set hh_path "$env(HOLEHELPERDIR)"
+
     variable primarypdb
     variable primarypsf
     variable primarydcd
@@ -24,9 +26,10 @@ namespace eval ::HOLEHelper:: {
 
 proc ::HOLEHelper::holehelper {} {
     variable w
-    variable primarypdb ".pdb"
-    variable primarypsf ".psf"
-    variable primarydcd ".dcd"
+    variable hh_path
+    variable primarypdb "random.pdb"
+    variable primarypsf "random.psf"
+    variable primarydcd "random/directory/random"
     variable dcd_step "100"
 	variable mol_sel "segname 6 7 8 9 10 11"
 	variable wrapping_condition "segname 11"
@@ -43,7 +46,6 @@ proc ::HOLEHelper::holehelper {} {
     set user [exec whoami]
     variable output_dir "/home/$user"
 
-
     if { [winfo exists .holehelper] } {
         wm deiconify $w
 	return
@@ -54,7 +56,7 @@ proc ::HOLEHelper::holehelper {} {
     grid columnconfigure $w 0 -weight 1
     grid rowconfigure $w 0 -weight 1
 
-    wm geometry $w 510x500
+    wm geometry $w 510x600
 
     set file_window $w.fileoptions
     ttk::labelframe $file_window -borderwidth 2 -relief ridge -text "File Options"
@@ -105,6 +107,11 @@ proc ::HOLEHelper::holehelper {} {
     pack $file_window -side top -pady 5 -padx 3 -fill x -anchor w
     pack $file_window.pdb $file_window.psf $file_window.dcd $file_window.dcdstep \
     -side top -padx 0 -pady 2 -expand 1 -fill x
+	
+    pack [button $w.loadmol -text "Load Mol" -command ::HOLEHelper::file_loader] \
+    -side top -pady 5 -padx 3 -fill x -anchor w
+    pack [button $w.delmol -text "Delete Top Mol" -command "mol delete top"] \
+    -side top -pady 5 -padx 3 -fill x -anchor w
     
     #------------------------------------------------------------------------
 
@@ -127,7 +134,7 @@ proc ::HOLEHelper::holehelper {} {
 	
 	pack $mol_window -side top -pady 5 -padx 3 -fill x -anchor w
 	pack $mol_window.molsel $mol_window.wrapping -side top -padx 0 -pady 2 -expand 1 -fill x
-	
+
 	#------------------------------------------------------------------------
     set inp_window $w.inpoptions
     ttk::labelframe $inp_window -borderwidth 2 -relief ridge -text "INP File Options"
@@ -212,18 +219,26 @@ proc ::HOLEHelper::holehelper {} {
 	pack $output_window.files -side top -padx 0 -pady 2 -expand 1 -fill x
 
 	#-------------------------------------------------------------------------
-    pack [button $w.running -text "Run HOLE2" -command ::HOLEHelper::run_hole2] \
+
+    pack [button $w.single -text "Run HOLE2 on Single Frame" -command ::HOLEHelper::run_hole2_single] \
+    -side top -pady 5 -padx 3 -fill x -anchor w
+
+    pack [button $w.traj -text "Run HOLE2 on Trajectory" -command ::HOLEHelper::run_hole2_traj] \
     -side top -pady 5 -padx 3 -fill x -anchor w
 	
     pack [button $w.loaded -text "Run HOLE2 On Top Mol" -command ::HOLEHelper::loaded_hole] \
     -side top -pady 5 -padx 3 -fill x -anchor w
 	#-------------------------------------------------------------------------
 }
+proc ::HOLEHelper::run_hole2_single {} {
+    puts "This is for the single frame HOLE2"
+}
 
-proc ::HOLEHelper::run_hole2 {} {
+proc ::HOLEHelper::run_hole2_traj {} {
     global env
-    set hh_path "$env(HOLEHELPERDIR)"
     set user [exec whoami]
+    variable hh_path
+
     variable primarypdb
     variable primarypsf
     variable primarydcd
@@ -241,8 +256,8 @@ proc ::HOLEHelper::run_hole2 {} {
 	variable primarycpnt_y
 	variable primarycpnt_z
     variable output_dir
-	
-	error_checker $primarypdb $primarypsf $primarydcd $dcd_step $mol_sel $wrapping_condition $primarycvec_x \
+
+	error_checker $mol_sel $wrapping_condition $primarycvec_x \
     $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
     $endrad $output_dir
     
@@ -253,31 +268,69 @@ proc ::HOLEHelper::run_hole2 {} {
     file mkdir inp-folder
     file mkdir sph-folder
     file mkdir logs-folder
+    set frame_nums [molinfo top get numframes]
 
-    puts "This function only runs when there are no errors"
-    # puts $hh_path
+    # Utilizes PBC wrap to wrap a molecule if necessary
 
+    if {$wrapping_condition != ""} {
+        pbc wrap -all -sel "${mol_sel}" -centersel "${wrapping_condition}" \
+        -compound fragment -center com
+    }
+
+    for { set f 0 } { $f < $frame_nums } { incr f} {
+
+        # Sets a sel variable for later use in the animate
+
+        set sel [atomselect top $mol_sel]
+
+        # Writing out the pdbs 
+
+        cd $output_dir/HH-Results/pdb-folder
+        animate write pdb "HoleHelper-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $sel
+
+        # Writing the inp files for the bash script to read
+
+        cd ../inp-folder
+        set outfile [open "HoleHelper-INP-${f}.inp" w+]
+        puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
+        puts $outfile "radius ${hh_path}rad/${radius}.rad"
+        puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
+        puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
+        if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
+            puts $outfile "cpoint ${primarycpnt_x} ${primarycpnt_y} ${primarycpnt_z}"
+        }
+        if {$endrad != ""} {
+            puts $outfile "endrad ${endrad}"
+        }
+        close $outfile
+    }
+    cd $hh_path
+    exec sh holebash.sh
+    exec python3 sphcleaner.py
+    source sameatomcount.tcl
+
+    set sphfilelist [lsort [glob *.sph]]
+    mol new [lindex $sphfilelist 0] type pdb
+    set top_num [molinfo top]
+    mol modstyle 0 $top_num VDW
+    set sel [atomselect top "all"]
+    $sel set radius [$sel get beta]
+    for {set f 1} {$f < $frame_nums} {incr f} {
+        mol addfile [lindex $sphfilelist $f] type pdb
+    }
 }
 
 proc ::HOLEHelper::loaded_hole {} {
+    variable hh_path
 
-	puts "This is for loaded HOLE"
+    # Do not need to worry about wrapping for loaded
+	puts $hh_path
 }
 
-proc ::HOLEHelper::error_checker {pdb psf dcd step molsel pbccond cvx cvy cvz cpx cpy cpz ed outdir} {
+proc ::HOLEHelper::error_checker {molsel pbccond cvx cvy cvz cpx cpy cpz ed outdir} {
 
-    if {[file extension $pdb] != ".pdb"} {
-        error "Needs proper pdb file"
-    } 
-    if {[file extension $psf] != ".psf"} {
-        error "Needs proper psf file"
-    } 
-    if {[file extension $dcd] != ".dcd"} {
-        error "Needs proper dcd file"
-    } 
-    if {[string is double -strict $step] != 1} {
-        error "Needs proper dcd step input"
-    } 
+    # Checks the validity of the mol sel and wrapping condition 
+
     set mol [atomselect top "$molsel"]
     if {[$mol num] == 0} {
         error "Needs real selection"
@@ -288,6 +341,9 @@ proc ::HOLEHelper::error_checker {pdb psf dcd step molsel pbccond cvx cvy cvz cp
             error "The center of the pbc wrap needs to have a + center of mass"
         }
     }
+
+    # Checks the direction vector for the inp file
+
     if {[string is double -strict $cvx] != 1} {
         error "Needs proper x vector"
     } 
@@ -297,6 +353,9 @@ proc ::HOLEHelper::error_checker {pdb psf dcd step molsel pbccond cvx cvy cvz cp
     if {[string is double -strict $cvz] != 1} {
         error "Needs proper z vector"
     } 
+
+    # Checks the center point vector for the inp file
+
     if {($cpx != "") || ($cpy != "") || ($cpz != "")} {
         if {[string is double -strict $cpx] != 1} {
             error "Needs proper x center"
@@ -308,13 +367,94 @@ proc ::HOLEHelper::error_checker {pdb psf dcd step molsel pbccond cvx cvy cvz cp
             error "Needs proper x center"
         } 
     }
+
+    # Checks type of end radius input
+
     if {$ed != ""}    {    
         if {[string is double -strict $ed] != 1} {
         error "Needs proper end radius"
         } 
     }
+
+    # Checks if valid directory
+
     if {[file isdirectory $outdir] != 1} {
         error "Needs proper output directory"
+    } 
+    puts "This goes through with no errors"
+}
+
+proc ::HOLEHelper::file_loader {} {
+    variable primarypdb
+    variable primarypsf
+    variable primarydcd
+    variable dcd_step
+
+    # Initial error checker before the files are loaded
+
+    if {($primarypdb != "") && ($primarypsf == "") && ($primarydcd == "")} {
+        if {[file extension $primarypdb] != ".pdb"} {
+            error "Needs proper pdb file"
+        } 
+    } elseif {($primarypdb != "") && ($primarypsf != "") && ($primarydcd != "")} {
+        if {[file extension $primarypdb] != ".pdb"} {
+            error "Needs proper pdb file"
+        } 
+        if {[file extension $primarypsf] != ".psf"} {
+            error "Needs proper psf file"
+        } 
+        if {[file isdirectory $primarydcd] != 1} {
+            error "Needs proper dcd directory"
+        } 
+    } elseif {($primarypdb != "") && ($primarypsf != "") && ($primarydcd == "")} {
+
+        if {[file extension $primarypdb] != ".pdb"} {
+            error "Needs proper pdb file"
+        } 
+        if {[file extension $primarypsf] != ".psf"} {
+            error "Needs proper psf file"
+        } 
+    } elseif {($primarypdb == "") && ($primarypsf != "") && ($primarydcd != "")} {
+
+        if {[file extension $primarypsf] != ".psf"} {
+            error "Needs proper psf file"
+        } 
+        if {[file isdirectory $primarydcd] != 1} {
+            error "Needs proper dcd directory"
+        } 
+    } else {
+        error "Needs valid combination of file inputs"
+    }
+    if {$primarydcd != ""} {
+        if {[string is double -strict $dcd_step] != 1} {
+        error "Needs proper dcd step input"
+        } 
+    }
+
+    # Loads files when all inputs are free of errors
+    # Needs to happen before the other checker because a valid mol sel needs
+    # to be present
+
+    if {($primarypdb != "") && ($primarypsf == "") && ($primarydcd == "")} {
+        mol new $primarypdb type pdb waitfor all
+    } elseif {($primarypdb != "") && ($primarypsf != "") && ($primarydcd == "")} {
+        mol new $primarypdb type pdb waitfor all
+        mol addfile $primarypsf type psf waitfor all
+    } elseif {($primarypdb != "") && ($primarypsf != "") && ($primarydcd != "")} {
+        mol new $primarypdb type pdb waitfor all
+        mol addfile $primarypsf type psf waitfor all
+        cd $primarydcd
+        foreach dcdfiles [lsort [glob *dcd]] {
+            puts $dcdfiles
+            mol addfile $dcdfiles type dcd step $dcd_step waitfor -1 
+        }
+    } elseif {($primarypdb == "") && ($primarypsf != "") && ($primarydcd != "")} {
+        mol new $primarypsf type psf waitfor all
+        cd $primarydcd
+        foreach dcdfiles [lsort [glob *dcd]] {
+            puts $dcdfiles
+            mol addfile $dcdfiles type dcd step $dcd_step waitfor -1 
+        }
     } 
 }
 

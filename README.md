@@ -32,7 +32,7 @@ This version is meant to only handle one "hole" in which the user can load it di
 - The mol selection can be anything that isolates the current hole such as: segname 6 7 8 9 10 11
 - The wrapping condition should be the protein in which you want pbc to wrap around (centersel)
     - The condition will go into the wrapping statement like so: 
-- `pbc wrap -first first -last last -centersel "wrapping condition input" -compound fragment -center com` 
+- `pbc wrap -all -sel "your original mol selection" -centersel "wrapping condition input" -compound fragment -center com` 
 
 **INP File Options:**
 - This is where the inputs for the INP file that the bash HOLE operation uses to make this program run faster than the other solutions currently. 
