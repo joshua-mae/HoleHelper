@@ -51,4 +51,4 @@ HH Results
     |-----Bash Log Files
 ```
 
-CLI Version - This version is the bare bones version that still only does one hole at a time but should be able to be put in a TCL script several times to calculate multiples holes at the same time. The CLI version can run multiple HOLE programs at the same time with knowledge of recent tests; the python version had issues with this so I was unsure. 
+CLI Version - This version is the bare bones version that still only does one hole at a time but should be able to be put in a TCL script several times to calculate multiples holes at the same time. The CLI version can run multiple HOLE programs at the same time with knowledge of recent tests; the python version had issues with this so I was unsure. hehe
