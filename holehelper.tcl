@@ -1,9 +1,10 @@
 package provide holehelper 1.0
 
 namespace eval ::HOLEHelper:: {
+    global env
     variable w
     set hh_path "$env(HOLEHELPERDIR)"
-
+    set user [exec whoami] 
     variable primarypdb
     variable primarypsf
     variable primarydcd
@@ -23,16 +24,37 @@ namespace eval ::HOLEHelper:: {
     variable output_dir
 } 
 
+proc holehelper_usage {} {
+    vmdcon -info "This is the CLI version of HoleHelper"
+}
+
+proc holehelper {args} {
+    global errorInfo errorCode
+    set oldcontext [psfcontext new]
+    set errflag [catch {eval holehelper_core $args} errMsg]
+    set savedInfo $errorInfo
+    set savedCode $errorCode
+    psfcontext $oldcontext delete
+    if $errflag { error $errMsg $savedInfo $savedCode}
+}
+
+proc holehelper_core {args} {
+    if { ![llength $args ]} {
+        holehelper_usage
+    }
+}
+
 
 proc ::HOLEHelper::holehelper {} {
     variable w
     variable hh_path
+    variable user
     variable primarypdb "random.pdb"
-    variable primarypsf "random.psf"
-    variable primarydcd "random/directory/random"
-    variable dcd_step "100"
-	variable mol_sel "segname 6 7 8 9 10 11"
-	variable wrapping_condition "segname 11"
+    variable primarypsf 
+    variable primarydcd 
+    variable dcd_step 
+	variable mol_sel "segname 36 to 41 and not segname 4"
+	variable wrapping_condition 
 	# variable output_pdb
 	# variable sphere_directory
 	variable primarycvec_x 0
@@ -43,7 +65,6 @@ proc ::HOLEHelper::holehelper {} {
 	variable primarycpnt_x
 	variable primarycpnt_y
 	variable primarycpnt_z
-    set user [exec whoami]
     variable output_dir "/home/$user"
 
     if { [winfo exists .holehelper] } {
@@ -139,20 +160,6 @@ proc ::HOLEHelper::holehelper {} {
     set inp_window $w.inpoptions
     ttk::labelframe $inp_window -borderwidth 2 -relief ridge -text "INP File Options"
 	ttk::style configure TLabelframe.Label -font bold
-
-    # frame $inp_window.temppdb
-    # grid [label $inp_window.temppdb.tpdblabel -text "Output PDB File Name: "] \
-    # -row 1 -column 0 -sticky e
-    # grid [entry $inp_window.temppdb.tpdbpath -textvariable \
-    # ::HOLEHelper::output_pdb -width 70 -justify left] -row 1 -column 1
-	# grid columnconfigure $inp_window.temppdb 1 -weight 1
-	
-    # frame $inp_window.sphere
-    # grid [label $inp_window.sphere.sphlabel -text "SPH Ouput File Path: "] \
-    # -row 1 -column 0 -sticky e
-    # grid [entry $inp_window.sphere.sphpath -textvariable \
-    # ::HOLEHelper::sphere_directory -width 70 -justify left] -row 1 -column 1
-	# grid columnconfigure $inp_window.sphere 1 -weight 1
 	
 	frame $inp_window.cvect
 	pack [label $inp_window.cvect.cvlabel -text "Center Vector (x,y,z): " ] -side left
@@ -185,7 +192,7 @@ proc ::HOLEHelper::holehelper {} {
 	pack [entry $inp_window.cpnt.y -width 12 -textvariable HOLEHelper::primarycpnt_y] -side left
 	pack [entry $inp_window.cpnt.z -width 12 -textvariable HOLEHelper::primarycpnt_z] -side left
     pack [button $inp_window.cpnt.cpntbutton -text "Simulate" \
-    -command { puts "This is simulating something"}] \
+    -command ::HOLEHelper::draw_sphere] \
 	
     frame $inp_window.edrad
     grid [label $inp_window.edrad.endlabel -text "Endrad: "] \
@@ -231,22 +238,78 @@ proc ::HOLEHelper::holehelper {} {
 	#-------------------------------------------------------------------------
 }
 proc ::HOLEHelper::run_hole2_single {} {
-    puts "This is for the single frame HOLE2"
+    variable user
+    variable primarypdb
+    variable hh_path
+	variable mol_sel
+	variable wrapping_condition
+	variable primarycvec_x
+	variable primarycvec_y
+	variable primarycvec_z
+	variable radius 
+	variable endrad
+	variable primarycpnt_x
+	variable primarycpnt_y
+	variable primarycpnt_z
+    variable output_dir
+    
+    # Utilizes PBC wrap to wrap a molecule if necessary
+
+    error_checker $mol_sel $wrapping_condition $primarycvec_x \
+    $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
+    $endrad $output_dir
+
+    cd $output_dir
+    file mkdir HH-Results
+    cd $output_dir/HH-Results
+    file mkdir pdb-folder
+    file mkdir inp-folder
+    file mkdir sph-folder
+    file mkdir logs-folder
+
+    if {$wrapping_condition != ""} {
+        pbc wrap -all -sel "${mol_sel}" -centersel "${wrapping_condition}" \
+        -compound fragment -center com
+    }
+    set sel [atomselect top $mol_sel]
+    cd $output_dir/HH-Results/pdb-folder
+    animate write pdb "HoleHelper-PDB-0.pdb" beg 0 end 0 waitfor -1 sel $sel
+
+    # Bash script needs an inp file in order to run 
+
+    cd $output_dir/HH-Results/inp-folder
+    set outfile [open "HoleHelper-INP-0.inp" w+]
+    puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-0.pdb"
+    puts $outfile "radius ${hh_path}rad/${radius}.rad"
+    puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-0.sph"
+    puts $outfile "ignore hoh tip wat"
+    puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
+    if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
+        puts $outfile "cpoint ${primarycpnt_x} ${primarycpnt_y} ${primarycpnt_z}"
+    } 
+    if {$endrad != ""} {
+        puts $outfile "endrad ${endrad}"
+    } 
+    close $outfile
+
+    cd $hh_path
+    exec sh holebash.sh
+
+    cd $output_dir/HH-Results/sph-folder
+    set sphfilelist [lsort [glob *.sph]]
+    mol new [lindex $sphfilelist 0] type pdb
+    set top_num [molinfo top]
+    mol modstyle 0 $top_num VDW
+    set sel [atomselect top "all"]
+    $sel set radius [$sel get beta]
+
 }
 
 proc ::HOLEHelper::run_hole2_traj {} {
-    global env
-    set user [exec whoami]
+    variable user
     variable hh_path
-
-    variable primarypdb
-    variable primarypsf
-    variable primarydcd
-    variable dcd_step
 	variable mol_sel
 	variable wrapping_condition
-	# variable output_pdb
-	# variable sphere_directory
 	variable primarycvec_x
 	variable primarycvec_y
 	variable primarycvec_z
@@ -263,7 +326,7 @@ proc ::HOLEHelper::run_hole2_traj {} {
     
     cd $output_dir
     file mkdir HH-Results
-    cd HH-Results
+    cd $output_dir/HH-Results
     file mkdir pdb-folder
     file mkdir inp-folder
     file mkdir sph-folder
@@ -304,11 +367,13 @@ proc ::HOLEHelper::run_hole2_traj {} {
         }
         close $outfile
     }
+
     cd $hh_path
     exec sh holebash.sh
     exec python3 sphcleaner.py
     source sameatomcount.tcl
 
+    cd $output_dir/HH-Results/sph-folder
     set sphfilelist [lsort [glob *.sph]]
     mol new [lindex $sphfilelist 0] type pdb
     set top_num [molinfo top]
@@ -321,10 +386,82 @@ proc ::HOLEHelper::run_hole2_traj {} {
 }
 
 proc ::HOLEHelper::loaded_hole {} {
+    variable user
+    variable primarypdb
+    variable wrapping_filler ""
     variable hh_path
+	variable primarycvec_x
+	variable primarycvec_y
+	variable primarycvec_z
+	variable radius 
+	variable endrad
+	variable primarycpnt_x
+	variable primarycpnt_y
+	variable primarycpnt_z
+    variable output_dir
 
-    # Do not need to worry about wrapping for loaded
-	puts $hh_path
+    set molecule_sel_lst [molinfo top get selection]
+    set cleaned_sel [lindex $molecule_sel_lst 0]
+    set final_mol_sel [atomselect top "${cleaned_sel}"]
+
+    error_checker $cleaned_sel $wrapping_filler $primarycvec_x \
+    $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
+    $endrad $output_dir
+
+    cd $output_dir
+    file mkdir HH-Results
+    cd $output_dir/HH-Results
+    file mkdir pdb-folder
+    file mkdir inp-folder
+    file mkdir sph-folder
+    file mkdir logs-folder
+    set frame_nums [molinfo top get numframes]
+
+    set com [measure center $final_mol_sel]
+    set com_x [lindex $com 0]
+    set com_y [lindex $com 1]
+    set com_z [lindex $com 2]
+
+    for { set f 0 } { $f < $frame_nums } { incr f} {
+
+        
+        # Writing out the pdbs 
+
+        cd $output_dir/HH-Results/pdb-folder
+        animate write pdb "HoleHelper-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $final_mol_sel
+
+        # Writing the inp files for the bash script to read
+
+        cd ../inp-folder
+        set outfile [open "HoleHelper-INP-${f}.inp" w+]
+        puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
+        puts $outfile "radius ${hh_path}rad/${radius}.rad"
+        puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
+        puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
+        if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
+            puts $outfile "cpoint ${primarycpnt_x} ${primarycpnt_y} ${primarycpnt_z}"
+        }
+        if {$endrad != ""} {
+            puts $outfile "endrad ${endrad}"
+        }
+        close $outfile
+    }
+
+    cd $hh_path
+    exec sh holebash.sh
+    exec python3 sphcleaner.py
+    source sameatomcount.tcl
+    cd $output_dir/HH-Results/sph-folder
+    set sphfilelist [lsort [glob *.sph]]
+    mol new [lindex $sphfilelist 0] type pdb
+    set top_num [molinfo top]
+    mol modstyle 0 $top_num VDW
+    set sel [atomselect top "all"]
+    $sel set radius [$sel get beta]
+    for {set f 1} {$f < $frame_nums} {incr f} {
+        mol addfile [lindex $sphfilelist $f] type pdb
+    }
+    
 }
 
 proc ::HOLEHelper::error_checker {molsel pbccond cvx cvy cvz cpx cpy cpz ed outdir} {
@@ -456,6 +593,38 @@ proc ::HOLEHelper::file_loader {} {
             mol addfile $dcdfiles type dcd step $dcd_step waitfor -1 
         }
     } 
+}
+
+proc ::HOLEHelper::draw_sphere {} {
+    variable mol_sel
+    variable primarycpnt_x
+    variable primarycpnt_y
+    variable primarycpnt_z
+
+    set mol [atomselect top "$mol_sel"]
+    if {[$mol num] == 0} {
+        error "Needs real selection"
+    } 
+    if {($primarycpnt_x != "") || ($primarycpnt_y != "") || ($primarycpnt_z != "")} {
+        if {[string is double -strict $primarycpnt_x] != 1} {
+            error "Needs proper x center"
+        } 
+        if {[string is double -strict $primarycpnt_y] != 1} {
+            error "Needs proper y center"
+        } 
+        if {[string is double -strict $primarycpnt_z] != 1} {
+            error "Needs proper z center"
+        } 
+    }
+    set sel [atomselect top "${mol_sel}"]
+    set radius [measure rgyr $sel]
+    set new_radius [expr $radius*0.4]
+    set com [measure center $sel]
+    if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
+        draw sphere [list $primarycpnt_x $primarycpnt_y $primarycpnt_z] radius $new_radius
+    } else {
+        draw sphere $com radius $new_radius
+    }
 }
 
 proc holehelper_tk_cb {} {
