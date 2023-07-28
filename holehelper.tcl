@@ -11,8 +11,6 @@ namespace eval ::HOLEHelper:: {
     variable dcd_step
 	variable mol_sel
 	variable wrapping_condition
-	# variable output_pdb
-	# variable sphere_directory
 	variable primarycvec_x
 	variable primarycvec_y
 	variable primarycvec_z
@@ -24,26 +22,185 @@ namespace eval ::HOLEHelper:: {
     variable output_dir
 } 
 
+# holehelper no realsystem.psf psfanddcdfiles 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no foldername
+
 proc holehelper_usage {} {
-    vmdcon -info "This is the CLI version of HoleHelper"
+    vmdcon -info "Usage: holehelper <pdbfile> <psffile> <dcdfolder> <dcdstep> <molsel> <wrap> \
+    <cvec> <radtype> <cp> <endrad> <outputdir>"
+    error "Needs correct inputs -> Look at the example or the README.md for guidance"
 }
 
 proc holehelper {args} {
+    # Print usage information if no arguments are given
     global errorInfo errorCode
-    set oldcontext [psfcontext new]
-    set errflag [catch {eval holehelper_core $args} errMsg]
+    set oldcontext [psfcontext new]  ;# new context
+    set errflag [catch { eval holehelper_core $args } errMsg]
     set savedInfo $errorInfo
     set savedCode $errorCode
-    psfcontext $oldcontext delete
-    if $errflag { error $errMsg $savedInfo $savedCode}
+    psfcontext $oldcontext delete  ;# revert to old context
+    if $errflag { error $errMsg $savedInfo $savedCode }
 }
 
 proc holehelper_core {args} {
+    global env
+    set user_holepath "$env(HOLEHELPERDIR)"
+    set user [exec whoami]
     if { ![llength $args ]} {
         holehelper_usage
     }
-}
 
+    set pdbfile [lindex $args 0]
+    set psffile [lindex $args 1]
+    set dcd_folder [lindex $args 2]
+    set step_size [lindex $args 3]
+    set molesel [lindex $args 4]
+    set wrap [lindex $args 5]
+    set cvec [lindex $args 6]
+    set radtype [lindex $args 7]
+    set cpoint [lindex $args 8]
+    set edrad [lindex $args 9]
+    set outputdir [lindex $args 10]
+
+    # Need to make sure file names are unique
+
+    set pdbbashpath [exec find /home/$user -type f -name "${pdbfile}" ! -path "*/\.*"]
+    set psfbashpath [exec find /home/$user -type f -name "${psffile}" ! -path "*/\.*"]
+    set dcdbashpath [exec find /home/$user  -type d -name "${dcd_folder}" ! -path "/home/*/*.*"]
+    
+    if {($pdbfile != "no") && ($psffile == "no") && ($dcd_folder == "no")} {
+        if {[file extension $pdbbashpath] != ".pdb"} {
+            error "Needs proper pdb file"
+        } 
+    } elseif {($pdbfile != "no") && ($psffile != "no") && ($dcd_folder != "no")} {
+        if {[file extension $pdbbashpath] != ".pdb"} {
+            error "Needs proper pdb file"
+        } 
+        if {[file extension $psfbashpath] != ".psf"} {
+            error "Needs proper psf file"
+        } 
+        if {[file isdirectory $dcd_folder] != 1} {
+            error "Needs proper dcd directory"
+        } 
+    } elseif {($pdbfile != "no") && ($psffile != "no") && ($dcd_folder == "no")} {
+
+        if {[file extension $pdbbashpath] != ".pdb"} {
+            error "Needs proper pdb file"
+        } 
+        if {[file extension $psfbashpath] != ".psf"} {
+            error "Needs proper psf file"
+        } 
+    } elseif {($pdbfile == "no") && ($psffile != "no") && ($dcd_folder != "no")} {
+
+        if {[file extension $psfbashpath] != ".psf"} {
+            error "Needs proper psf file"
+        } 
+        if {[file isdirectory $dcd_folder] != 1} {
+            error "Needs proper dcd directory"
+        } 
+    } else {
+        error "Needs valid combination of file inputs"
+    }
+    if {$dcd_folder != "no"} {
+        if {[string is double -strict $step_size] != 1} {
+        error "Needs proper dcd step input"
+        } 
+    }
+    # Not gonna check for the molecule selections, wrap, or center vec/point.
+    # VMD errors will give enough info, I cant do those checks without ruining the 
+    # workflow drastically
+
+    if {$wrap != "no"} {
+        pbc wrap -all -sel "${molesel}" -centersel "${wrap}" \
+        -compound fragment -center com
+    }   
+
+    if {$edrad != "no"} {    
+        if {[string is double -strict $edrad] != 1} {
+        error "Needs proper end radius"
+        } 
+    } 
+    if {[file isdirectory $outputdir] != 1} {
+        error "Needs proper output directory"
+    } 
+
+    set outputdirbashpath [exec find /home/$user  -type d -name "${outputdir}" ! -path "/home/*/*.*"]
+
+    if {($pdbfile != "no") && ($psffile == "no") && ($dcd_folder == "no")} {
+        mol new $pdbbashpath type pdb waitfor all
+    } elseif {($pdbfile != "no") && ($psffile != "no") && ($dcd_folder == "no")} {
+        mol new $pdbbashpath type pdb waitfor all
+        mol addfile $psfbashpath type psf waitfor all
+    } elseif {($pdbfile != "no") && ($psffile != "no") && ($dcd_folder != "no")} {
+        mol new $pdbbashpath type pdb waitfor all
+        mol addfile $psfbashpath type psf waitfor all
+        cd $dcdbashpath
+        foreach dcdfiles [lsort [glob *dcd]] {
+            puts $dcdfiles
+            mol addfile $dcdfiles type dcd step $step_size waitfor -1 
+        }
+    } elseif {($pdbfile == "no") && ($psffile != "no") && ($dcd_folder != "no")} {
+        mol new $psfbashpath type psf waitfor all
+        cd $dcdbashpath
+        foreach dcdfiles [lsort [glob *dcd]] {
+            puts $dcdfiles
+            mol addfile $dcdfiles type dcd step $step_size waitfor -1 
+        }
+    }
+    cd $outputdirbashpath
+    file mkdir HH-Results
+    cd $outputdirbashpath/HH-Results
+    file mkdir pdb-folder
+    file mkdir inp-folder
+    file mkdir sph-folder
+    file mkdir logs-folder
+
+    set frame_nums [molinfo top get numframes]
+
+    for { set f 0 } { $f < $frame_nums } { incr f} {
+
+        # Sets a sel variable for later use in the animate
+
+        set sel [atomselect top $molesel]
+
+        # Writing out the pdbs 
+
+        cd $outputdirbashpath/HH-Results/pdb-folder
+        animate write pdb "HoleHelper-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $sel
+
+        # Writing the inp files for the bash script to read
+
+        cd ../inp-folder
+        set outfile [open "HoleHelper-INP-${f}.inp" w+]
+        puts $outfile "coord ${outputdirbashpath}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
+        puts $outfile "radius ${user_holepath}rad/${radtype}.rad"
+        puts $outfile "sphpdb ${outputdirbashpath}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
+        puts $outfile "cvect ${cvec}"
+        if {$cpoint != "no"} {
+            puts $outfile "cpoint ${cpoint}"
+        }
+        if {$edrad != "no"} {
+            puts $outfile "endrad ${edrad}"
+        }
+        close $outfile
+    }
+
+    cd $user_holepath
+    exec sh holebash.sh
+    exec python3 sphcleaner.py
+    source sameatomcount.tcl
+
+    cd $outputdirbashpath/HH-Results/sph-folder
+    set sphfilelist [lsort [glob *.sph]]
+    mol new [lindex $sphfilelist 0] type pdb
+    set top_num [molinfo top]
+    mol modstyle 0 $top_num VDW
+    set sel [atomselect top "all"]
+    $sel set radius [$sel get beta]
+    for {set f 1} {$f < $frame_nums} {incr f} {
+        mol addfile [lindex $sphfilelist $f] type pdb
+    }
+
+}
 
 proc ::HOLEHelper::holehelper {} {
     variable w
