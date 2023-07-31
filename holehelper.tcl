@@ -436,7 +436,7 @@ proc ::HOLEHelper::run_hole2_single {} {
     cd $output_dir/HH-Results/inp-folder
     set outfile [open "HoleHelper-INP-0.inp" w+]
     puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-0.pdb"
-    puts $outfile "radius ${hh_path}rad/${radius}.rad"
+    puts $outfile "radius ${hh_path}/rad/${radius}.rad"
     puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-0.sph"
     puts $outfile "ignore hoh tip wat"
     puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
@@ -512,7 +512,7 @@ proc ::HOLEHelper::run_hole2_traj {} {
         cd ../inp-folder
         set outfile [open "HoleHelper-INP-${f}.inp" w+]
         puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
-        puts $outfile "radius ${hh_path}rad/${radius}.rad"
+        puts $outfile "radius ${hh_path}/rad/${radius}.rad"
         puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
         puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
         if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
