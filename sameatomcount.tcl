@@ -1,4 +1,5 @@
-set hh_path [exec find /home/josh -type d -name "HH-Results" ! -path "/home/*/*.*"]
+set user [exec whoami]
+set hh_path [exec find /home/$user -type d -name "HH-Results" ! -path "/home/*/*.*"]
 cd $hh_path/sph-folder
 
 set frame_nums [molinfo top get numframes]

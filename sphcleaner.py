@@ -22,7 +22,10 @@ def readsphfile(sphfile):
     fi.close()
 
 def main():
-    cli_func = subprocess.run(['find /home/josh -type d -name "HH-Results" ! -path "/home/*/*.*"'],shell=True, capture_output=True,text=True)
+    user_name = subprocess.run(['whoami'],shell=True, capture_output=True,text=True)
+    readable_user_name = user_name.stdout
+    cleaned_user_name = readable_user_name.strip()
+    cli_func = subprocess.run([f'find /home/{cleaned_user_name} -type d -name "HH-Results" ! -path "/home/*/*.*"'],shell=True, capture_output=True,text=True)
     sph_path = cli_func.stdout
     sph_path = sph_path.strip()
     sph_path += "/sph-folder/"
