@@ -173,7 +173,7 @@ proc holehelper_core {args} {
         cd ../inp-folder
         set outfile [open "HoleHelper-INP-${f}.inp" w+]
         puts $outfile "coord ${outputdirbashpath}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
-        puts $outfile "radius ${user_holepath}rad/${radtype}.rad"
+        puts $outfile "radius ${user_holepath}/rad/${radtype}.rad"
         puts $outfile "sphpdb ${outputdirbashpath}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
         puts $outfile "cvect ${cvec}"
         if {$cpoint != "no"} {

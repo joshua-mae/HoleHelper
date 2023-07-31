@@ -9,7 +9,7 @@ foreach sph $sphfilelist {
     mol new $sph type pdb
     set real_atom_count [molinfo top get numatoms]
     set moleculeid [molinfo top]
-    set fake_atom_count 10000
+    set fake_atom_count 1000
     set atom_count_diff [expr $fake_atom_count - $real_atom_count]
     set outfile [open $sph a]
     for { set f 0 } {$f < $atom_count_diff } { incr f} {
