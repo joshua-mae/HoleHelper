@@ -10,7 +10,7 @@ The first line makes sure that the plugin is found/recognized when vmd is starte
 The second line actually puts the plugin into the extension section of vmd in the "Analysis" section.
 ```
 lappend auto_path /home/josh/HoleHelper/
-vmd_install_extension HoleHelper holehelper_tk_cb Analysis/holehelper
+vmd_install_extension HoleHelper holehelper_tk_cb Analysis/HoleHelper
 ```
 For a quick sanity check, go to the TK console and input: `package require holehelper` \
 which should yield a version number if correctly installed.
@@ -20,7 +20,7 @@ Lastly, this needs HOLE2 to be installed and configured for this plugin to work.
 ## Purpose/Usage
 This plugin was made so users could utilize HOLE without having to go through the outdated or limited workings of the MDAnalysis version; more will be explained in the application note, but that is the main idea.
 
-**GUI Version**
+## **GUI Version**
 This version is meant to only handle one "hole" in which the user can load it directly through the GUI or from a loaded molecule that is the top molecule in VMD.  Additionally, it does come with some other bells and whistles like seeing where the HOLE program will originate and an easier to follow workflow. 
 
 **Sections:** \
@@ -51,4 +51,18 @@ HH Results
     |-----Bash Log Files
 ```
 
-CLI Version - This version is the bare bones version that still only does one hole at a time but should be able to be put in a TCL script several times to calculate multiples holes at the same time. The CLI version can run multiple HOLE programs at the same time with knowledge of recent tests; the python version had issues with this so I was unsure. hehe
+## **CLI Version** 
+This version is the bare bones version that still only does one hole at a time but should be able to be put in a TCL script several times to calculate multiples holes at the same time. The CLI version can run multiple HOLE programs at the same time with knowledge of recent tests; the python version had issues with this so I was unsure. 
+
+**Sections:** \
+This version has the same layout as the GUI version except everything happens behind the hood but it essentially loads the molecule and does the operation on that given molecule
+
+Here would be for a newly loaded molecule (File names must be unique or else the program will not work)
+```
+holehelper no system.psf dcdfolder 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no test
+```
+
+Here is an example if you already have a molecule loaded and you wanted to run it on the top mol:
+```
+holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no test
+```
