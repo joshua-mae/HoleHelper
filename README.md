@@ -59,10 +59,10 @@ This version has the same layout as the GUI version except everything happens be
 
 Here would be for a newly loaded molecule (File names must be unique or else the program will not work)
 ```
-holehelper no system.psf dcdfolder 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no test
+holehelper no system.psf dcdfolder 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder
 ```
 
 Here is an example if you already have a molecule loaded and you wanted to run it on the top mol:
 ```
-holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no test
+holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder
 ```
