@@ -22,7 +22,6 @@ namespace eval ::HOLEHelper:: {
     variable output_dir
 } 
 
-# holehelper no realsystem.psf psfanddcdfiles 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no foldername
 
 proc holehelper_usage {} {
     vmdcon -info "Usage: holehelper <pdbfile> <psffile> <dcdfolder> <dcdstep> <molsel> <wrap> \
@@ -97,6 +96,8 @@ proc holehelper_core {args} {
         if {[file isdirectory $dcd_folder] != 1} {
             error "Needs proper dcd directory"
         } 
+    } elseif {($pdbfile == "no") && ($psffile == "no") && ($dcd_folder == "no") && ($step_size == "no")} {
+        puts "This is still a valid combination!"
     } else {
         error "Needs valid combination of file inputs"
     }
@@ -109,6 +110,8 @@ proc holehelper_core {args} {
     # VMD errors will give enough info, I cant do those checks without ruining the 
     # workflow drastically
 
+    set outputdirbashpath [exec find /home/$user  -type d -name "${outputdir}" ! -path "/home/*/*.*"]
+
     if {$wrap != "no"} {
         pbc wrap -all -sel "${molesel}" -centersel "${wrap}" \
         -compound fragment -center com
@@ -119,11 +122,9 @@ proc holehelper_core {args} {
         error "Needs proper end radius"
         } 
     } 
-    if {[file isdirectory $outputdir] != 1} {
+    if {[file isdirectory $outputdirbashpath] != 1} {
         error "Needs proper output directory"
     } 
-
-    set outputdirbashpath [exec find /home/$user  -type d -name "${outputdir}" ! -path "/home/*/*.*"]
 
     if {($pdbfile != "no") && ($psffile == "no") && ($dcd_folder == "no")} {
         mol new $pdbbashpath type pdb waitfor all
@@ -172,7 +173,7 @@ proc holehelper_core {args} {
         cd ../inp-folder
         set outfile [open "HoleHelper-INP-${f}.inp" w+]
         puts $outfile "coord ${outputdirbashpath}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
-        puts $outfile "radius ${user_holepath}rad/${radtype}.rad"
+        puts $outfile "radius ${user_holepath}/rad/${radtype}.rad"
         puts $outfile "sphpdb ${outputdirbashpath}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
         puts $outfile "cvect ${cvec}"
         if {$cpoint != "no"} {
@@ -206,14 +207,12 @@ proc ::HOLEHelper::holehelper {} {
     variable w
     variable hh_path
     variable user
-    variable primarypdb "random.pdb"
+    variable primarypdb 
     variable primarypsf 
     variable primarydcd 
     variable dcd_step 
-	variable mol_sel "segname 36 to 41 and not segname 4"
+	variable mol_sel 
 	variable wrapping_condition 
-	# variable output_pdb
-	# variable sphere_directory
 	variable primarycvec_x 0
 	variable primarycvec_y 0
 	variable primarycvec_z 1
@@ -437,7 +436,7 @@ proc ::HOLEHelper::run_hole2_single {} {
     cd $output_dir/HH-Results/inp-folder
     set outfile [open "HoleHelper-INP-0.inp" w+]
     puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-0.pdb"
-    puts $outfile "radius ${hh_path}rad/${radius}.rad"
+    puts $outfile "radius ${hh_path}/rad/${radius}.rad"
     puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-0.sph"
     puts $outfile "ignore hoh tip wat"
     puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
@@ -513,7 +512,7 @@ proc ::HOLEHelper::run_hole2_traj {} {
         cd ../inp-folder
         set outfile [open "HoleHelper-INP-${f}.inp" w+]
         puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
-        puts $outfile "radius ${hh_path}rad/${radius}.rad"
+        puts $outfile "radius ${hh_path}/rad/${radius}.rad"
         puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
         puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
         if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
@@ -592,7 +591,7 @@ proc ::HOLEHelper::loaded_hole {} {
         cd ../inp-folder
         set outfile [open "HoleHelper-INP-${f}.inp" w+]
         puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
-        puts $outfile "radius ${hh_path}rad/${radius}.rad"
+        puts $outfile "radius ${hh_path}/rad/${radius}.rad"
         puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
         puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
         if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
