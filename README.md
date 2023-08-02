@@ -20,6 +20,10 @@ Lastly, this needs HOLE2 to be installed and configured for this plugin to work.
 ## Purpose/Usage
 This plugin was made so users could utilize HOLE without having to go through the outdated or limited workings of the MDAnalysis version; more will be explained in the application note, but that is the main idea.
 
+<p>
+  <img src="https://github.com/joshua-mae/HoleHelper/blob/cd99b3d5d8285a14747a36f05369d04052ca588b/demos/Screenshot%202023-07-31%20at%2011.53.28%20AM.png" width="325">
+</p>
+
 ## **GUI Version**
 This version is meant to only handle one "hole" in which the user can load it directly through the GUI or from a loaded molecule that is the top molecule in VMD.  Additionally, it does come with some other bells and whistles like seeing where the HOLE program will originate and an easier to follow workflow. 
 
