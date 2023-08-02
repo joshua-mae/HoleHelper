@@ -70,3 +70,12 @@ Here is an example if you already have a molecule loaded and you wanted to run i
 ```
 holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder
 ```
+
+In theory, if one wanted to maximize efficiency, it would be possible to stack the commands in one tcl file and run that to perform this on several holes with one file already loaded in.
+```
+# example.tcl
+holehelper no no no 100 "segname 0 1 2 3 4 5" "segname 0" "0 0 1" "simple2" no no testfolder
+holehelper no no no 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder1
+holehelper no no no 100 "segname 6 7 8 9 10 11" "segname 6" "0 0 1" "simple2" no no testfolder2
+```
+
