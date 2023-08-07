@@ -20,8 +20,8 @@ namespace eval ::HOLEHelper:: {
 	variable primarycpnt_y
 	variable primarycpnt_z
     variable output_dir
+    variable output_file_name
 } 
-
 
 proc holehelper_usage {} {
     vmdcon -info "Usage: holehelper <pdbfile> <psffile> <dcdfolder> <dcdstep> <molsel> <wrap> \
@@ -59,9 +59,11 @@ proc holehelper_core {args} {
     set cpoint [lindex $args 8]
     set edrad [lindex $args 9]
     set outputdir [lindex $args 10]
+    set filenames [lindex $args 11]
+
 
     # Need to make sure file names are unique
-
+    
     set pdbbashpath [exec find /home/$user -type f -name "${pdbfile}" ! -path "*/\.*"]
     set psfbashpath [exec find /home/$user -type f -name "${psffile}" ! -path "*/\.*"]
     set dcdbashpath [exec find /home/$user  -type d -name "${dcd_folder}" ! -path "/home/*/*.*"]
@@ -69,7 +71,8 @@ proc holehelper_core {args} {
     if {($pdbfile != "no") && ($psffile == "no") && ($dcd_folder == "no")} {
         if {[file extension $pdbbashpath] != ".pdb"} {
             error "Needs proper pdb file"
-        } 
+        }
+ 
     } elseif {($pdbfile != "no") && ($psffile != "no") && ($dcd_folder != "no")} {
         if {[file extension $pdbbashpath] != ".pdb"} {
             error "Needs proper pdb file"
@@ -80,6 +83,7 @@ proc holehelper_core {args} {
         if {[file isdirectory $dcd_folder] != 1} {
             error "Needs proper dcd directory"
         } 
+
     } elseif {($pdbfile != "no") && ($psffile != "no") && ($dcd_folder == "no")} {
 
         if {[file extension $pdbbashpath] != ".pdb"} {
@@ -112,11 +116,6 @@ proc holehelper_core {args} {
 
     set outputdirbashpath [exec find /home/$user  -type d -name "${outputdir}" ! -path "/home/*/*.*"]
 
-    if {$wrap != "no"} {
-        pbc wrap -all -sel "${molesel}" -centersel "${wrap}" \
-        -compound fragment -center com
-    }   
-
     if {$edrad != "no"} {    
         if {[string is double -strict $edrad] != 1} {
         error "Needs proper end radius"
@@ -147,6 +146,11 @@ proc holehelper_core {args} {
             mol addfile $dcdfiles type dcd step $step_size waitfor -1 
         }
     }
+    if {$wrap != "no"} {
+        pbc wrap -sel "${molesel}" -all -centersel "${wrap}" \
+        -compound fragment -center com
+    }  
+
     cd $outputdirbashpath
     file mkdir HH-Results
     cd $outputdirbashpath/HH-Results
@@ -154,6 +158,7 @@ proc holehelper_core {args} {
     file mkdir inp-folder
     file mkdir sph-folder
     file mkdir logs-folder
+    set top_mol [molinfo top]
 
     set frame_nums [molinfo top get numframes]
 
@@ -166,15 +171,15 @@ proc holehelper_core {args} {
         # Writing out the pdbs 
 
         cd $outputdirbashpath/HH-Results/pdb-folder
-        animate write pdb "HoleHelper-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $sel
+        animate write pdb "${filenames}-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $sel
 
         # Writing the inp files for the bash script to read
 
         cd ../inp-folder
-        set outfile [open "HoleHelper-INP-${f}.inp" w+]
-        puts $outfile "coord ${outputdirbashpath}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
+        set outfile [open "${filenames}-INP-${f}.inp" w+]
+        puts $outfile "coord ${outputdirbashpath}/HH-Results/pdb-folder/${filenames}-PDB-${f}.pdb"
         puts $outfile "radius ${user_holepath}/rad/${radtype}.rad"
-        puts $outfile "sphpdb ${outputdirbashpath}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
+        puts $outfile "sphpdb ${outputdirbashpath}/HH-Results/sph-folder/${filenames}-SPH-${f}.sph"
         puts $outfile "cvect ${cvec}"
         if {$cpoint != "no"} {
             puts $outfile "cpoint ${cpoint}"
@@ -186,11 +191,25 @@ proc holehelper_core {args} {
     }
 
     cd $user_holepath
-    exec sh holebash.sh
-    exec python3 sphcleaner.py
-    source sameatomcount.tcl
-
+    exec sh holebash.sh "${outputdirbashpath}"
+    exec python3 sphcleaner.py ${outputdirbashpath}
     cd $outputdirbashpath/HH-Results/sph-folder
+    set sphfilelist [lsort [glob *.sph]]
+
+    foreach sph $sphfilelist {
+        mol new $sph type pdb
+        set real_atom_count [molinfo top get numatoms]
+        set moleculeid [molinfo top]
+        set fake_atom_count 1000
+        set atom_count_diff [expr $fake_atom_count - $real_atom_count]
+        set outfile [open $sph a]
+        for { set f 0 } {$f < $atom_count_diff } { incr f} {
+            puts $outfile "ATOM      1  QSS SPH S-888"
+        }
+        close $outfile
+        mol delete $moleculeid
+    }
+
     set sphfilelist [lsort [glob *.sph]]
     mol new [lindex $sphfilelist 0] type pdb
     set top_num [molinfo top]
@@ -200,7 +219,8 @@ proc holehelper_core {args} {
     for {set f 1} {$f < $frame_nums} {incr f} {
         mol addfile [lindex $sphfilelist $f] type pdb
     }
-
+    cd /home/$user
+    mol top $top_mol
 }
 
 proc ::HOLEHelper::holehelper {} {
@@ -222,6 +242,8 @@ proc ::HOLEHelper::holehelper {} {
 	variable primarycpnt_y
 	variable primarycpnt_z
     variable output_dir "/home/$user"
+    variable output_file_name
+
 
     if { [winfo exists .holehelper] } {
         wm deiconify $w
@@ -233,7 +255,7 @@ proc ::HOLEHelper::holehelper {} {
     grid columnconfigure $w 0 -weight 1
     grid rowconfigure $w 0 -weight 1
 
-    wm geometry $w 510x600
+    wm geometry $w 510x575
 
     set file_window $w.fileoptions
     ttk::labelframe $file_window -borderwidth 2 -relief ridge -text "File Options"
@@ -378,8 +400,14 @@ proc ::HOLEHelper::holehelper {} {
 	}] -row 0 -column 2 -sticky w
 	grid columnconfigure $output_window.files 1 -weight 1
 
+    frame $output_window.naming
+    grid [label $output_window.naming.namelabel -text "PDB/INP/SPH File Name: "] \
+    -row 1 -column 0 -sticky e
+    grid [entry $output_window.naming.namepath -textvariable \
+    ::HOLEHelper::output_file_name -width 30 -justify left] -row 1 -column 1
+
 	pack $output_window -side top -pady 5 -padx 3 -fill x -anchor w
-	pack $output_window.files -side top -padx 0 -pady 2 -expand 1 -fill x
+	pack $output_window.files $output_window.naming -side top -padx 0 -pady 2 -expand 1 -fill x
 
 	#-------------------------------------------------------------------------
 
@@ -388,9 +416,7 @@ proc ::HOLEHelper::holehelper {} {
 
     pack [button $w.traj -text "Run HOLE2 on Trajectory" -command ::HOLEHelper::run_hole2_traj] \
     -side top -pady 5 -padx 3 -fill x -anchor w
-	
-    pack [button $w.loaded -text "Run HOLE2 On Top Mol" -command ::HOLEHelper::loaded_hole] \
-    -side top -pady 5 -padx 3 -fill x -anchor w
+
 	#-------------------------------------------------------------------------
 }
 proc ::HOLEHelper::run_hole2_single {} {
@@ -408,12 +434,17 @@ proc ::HOLEHelper::run_hole2_single {} {
 	variable primarycpnt_y
 	variable primarycpnt_z
     variable output_dir
+    variable output_file_name
+
     
     # Utilizes PBC wrap to wrap a molecule if necessary
 
     error_checker $mol_sel $wrapping_condition $primarycvec_x \
     $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
     $endrad $output_dir
+
+        
+    set top_mol [molinfo top]
 
     cd $output_dir
     file mkdir HH-Results
@@ -429,15 +460,15 @@ proc ::HOLEHelper::run_hole2_single {} {
     }
     set sel [atomselect top $mol_sel]
     cd $output_dir/HH-Results/pdb-folder
-    animate write pdb "HoleHelper-PDB-0.pdb" beg 0 end 0 waitfor -1 sel $sel
+    animate write pdb "${output_file_name}-PDB-0.pdb" beg 0 end 0 waitfor -1 sel $sel
 
     # Bash script needs an inp file in order to run 
 
     cd $output_dir/HH-Results/inp-folder
-    set outfile [open "HoleHelper-INP-0.inp" w+]
-    puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-0.pdb"
+    set outfile [open "${output_file_name}-INP-0.inp" w+]
+    puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/${output_file_name}-PDB-0.pdb"
     puts $outfile "radius ${hh_path}/rad/${radius}.rad"
-    puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-0.sph"
+    puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/${output_file_name}-SPH-0.sph"
     puts $outfile "ignore hoh tip wat"
     puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
     if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
@@ -449,7 +480,8 @@ proc ::HOLEHelper::run_hole2_single {} {
     close $outfile
 
     cd $hh_path
-    exec sh holebash.sh
+    exec sh holebash.sh "$output_dir"
+
 
     cd $output_dir/HH-Results/sph-folder
     set sphfilelist [lsort [glob *.sph]]
@@ -459,11 +491,19 @@ proc ::HOLEHelper::run_hole2_single {} {
     set sel [atomselect top "all"]
     $sel set radius [$sel get beta]
 
+    cd /home/$user
+    mol top $top_mol
+
 }
+
+# pbc wrap -all -sel "segname 12 13 14 15 16 17" -centersel "segname 12" -compound fragment -center com
+# pbc wrap -all -sel "segname 0 1 2 3 4 5" -centersel "segname 0" -compound fragment -center com
+# pbc wrap -all -sel "segname 6 7 8 9 10 11" -centersel "segname 11" -compound fragment -center com
 
 proc ::HOLEHelper::run_hole2_traj {} {
     variable user
     variable hh_path
+    variable primarypsf
 	variable mol_sel
 	variable wrapping_condition
 	variable primarycvec_x
@@ -475,11 +515,15 @@ proc ::HOLEHelper::run_hole2_traj {} {
 	variable primarycpnt_y
 	variable primarycpnt_z
     variable output_dir
+    variable output_file_name
+
 
 	error_checker $mol_sel $wrapping_condition $primarycvec_x \
     $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
     $endrad $output_dir
     
+    set top_mol [molinfo top]
+
     cd $output_dir
     file mkdir HH-Results
     cd $output_dir/HH-Results
@@ -505,15 +549,15 @@ proc ::HOLEHelper::run_hole2_traj {} {
         # Writing out the pdbs 
 
         cd $output_dir/HH-Results/pdb-folder
-        animate write pdb "HoleHelper-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $sel
+        animate write pdb "${output_file_name}-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $sel
 
         # Writing the inp files for the bash script to read
 
         cd ../inp-folder
-        set outfile [open "HoleHelper-INP-${f}.inp" w+]
-        puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
+        set outfile [open "${output_file_name}-INP-${f}.inp" w+]
+        puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/${output_file_name}-PDB-${f}.pdb"
         puts $outfile "radius ${hh_path}/rad/${radius}.rad"
-        puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
+        puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/${output_file_name}-SPH-${f}.sph"
         puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
         if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
             puts $outfile "cpoint ${primarycpnt_x} ${primarycpnt_y} ${primarycpnt_z}"
@@ -524,10 +568,27 @@ proc ::HOLEHelper::run_hole2_traj {} {
         close $outfile
     }
 
+
     cd $hh_path
-    exec sh holebash.sh
-    exec python3 sphcleaner.py
-    source sameatomcount.tcl
+    exec sh holebash.sh "${output_dir}"
+    exec python3 sphcleaner.py ${output_dir}
+
+    cd $output_dir/HH-Results/sph-folder
+    set sphfilelist [lsort [glob *.sph]]
+
+    foreach sph $sphfilelist {
+        mol new $sph type pdb
+        set real_atom_count [molinfo top get numatoms]
+        set moleculeid [molinfo top]
+        set fake_atom_count 1000
+        set atom_count_diff [expr $fake_atom_count - $real_atom_count]
+        set outfile [open $sph a]
+        for { set f 0 } {$f < $atom_count_diff } { incr f} {
+            puts $outfile "ATOM      1  QSS SPH S-888"
+        }
+        close $outfile
+        mol delete $moleculeid
+    }
 
     cd $output_dir/HH-Results/sph-folder
     set sphfilelist [lsort [glob *.sph]]
@@ -539,85 +600,9 @@ proc ::HOLEHelper::run_hole2_traj {} {
     for {set f 1} {$f < $frame_nums} {incr f} {
         mol addfile [lindex $sphfilelist $f] type pdb
     }
-}
+    cd /home/$user
+    mol top $top_mol
 
-proc ::HOLEHelper::loaded_hole {} {
-    variable user
-    variable primarypdb
-    variable wrapping_filler ""
-    variable hh_path
-	variable primarycvec_x
-	variable primarycvec_y
-	variable primarycvec_z
-	variable radius 
-	variable endrad
-	variable primarycpnt_x
-	variable primarycpnt_y
-	variable primarycpnt_z
-    variable output_dir
-
-    set molecule_sel_lst [molinfo top get selection]
-    set cleaned_sel [lindex $molecule_sel_lst 0]
-    set final_mol_sel [atomselect top "${cleaned_sel}"]
-
-    error_checker $cleaned_sel $wrapping_filler $primarycvec_x \
-    $primarycvec_y $primarycvec_z $primarycpnt_x $primarycpnt_y $primarycpnt_z \
-    $endrad $output_dir
-
-    cd $output_dir
-    file mkdir HH-Results
-    cd $output_dir/HH-Results
-    file mkdir pdb-folder
-    file mkdir inp-folder
-    file mkdir sph-folder
-    file mkdir logs-folder
-    set frame_nums [molinfo top get numframes]
-
-    set com [measure center $final_mol_sel]
-    set com_x [lindex $com 0]
-    set com_y [lindex $com 1]
-    set com_z [lindex $com 2]
-
-    for { set f 0 } { $f < $frame_nums } { incr f} {
-
-        
-        # Writing out the pdbs 
-
-        cd $output_dir/HH-Results/pdb-folder
-        animate write pdb "HoleHelper-PDB-${f}.pdb" beg $f end $f waitfor -1 sel $final_mol_sel
-
-        # Writing the inp files for the bash script to read
-
-        cd ../inp-folder
-        set outfile [open "HoleHelper-INP-${f}.inp" w+]
-        puts $outfile "coord ${output_dir}/HH-Results/pdb-folder/HoleHelper-PDB-${f}.pdb"
-        puts $outfile "radius ${hh_path}/rad/${radius}.rad"
-        puts $outfile "sphpdb ${output_dir}/HH-Results/sph-folder/HoleHelper-SPH-${f}.sph"
-        puts $outfile "cvect ${primarycvec_x} ${primarycvec_y} ${primarycvec_z}"
-        if {($primarycpnt_x != "") && ($primarycpnt_x != "") && ($primarycpnt_x != "")} {
-            puts $outfile "cpoint ${primarycpnt_x} ${primarycpnt_y} ${primarycpnt_z}"
-        }
-        if {$endrad != ""} {
-            puts $outfile "endrad ${endrad}"
-        }
-        close $outfile
-    }
-
-    cd $hh_path
-    exec sh holebash.sh
-    exec python3 sphcleaner.py
-    source sameatomcount.tcl
-    cd $output_dir/HH-Results/sph-folder
-    set sphfilelist [lsort [glob *.sph]]
-    mol new [lindex $sphfilelist 0] type pdb
-    set top_num [molinfo top]
-    mol modstyle 0 $top_num VDW
-    set sel [atomselect top "all"]
-    $sel set radius [$sel get beta]
-    for {set f 1} {$f < $frame_nums} {incr f} {
-        mol addfile [lindex $sphfilelist $f] type pdb
-    }
-    
 }
 
 proc ::HOLEHelper::error_checker {molsel pbccond cvx cvy cvz cpx cpy cpz ed outdir} {
