@@ -61,22 +61,29 @@ This version is the bare bones version that still only does one hole at a time b
 **Sections:** \
 This version has the same layout as the GUI version except everything happens behind the hood but it essentially loads the molecule and does the operation on that given molecule
 
-Here would be for a newly loaded molecule (File names must be unique or else the program will not work)
+Here would be for a newly loaded molecule (File names must be unique or else the program will not work):
 ```
-holehelper no system.psf dcdfolder 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder
+holehelper no system.psf dcdfolder 100 "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder trimer
+```
+
+Same can be done if a user wants it done on a single frame:
+```
+holehelper system.pdb no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder trimer
 ```
 
 Here is an example if you already have a molecule loaded and you wanted to run it on the top mol:
 ```
-holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder
+holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder trimer
 ```
 
-<del> In theory, if one wanted to maximize efficiency, it would be possible to stack the commands in one tcl file and run that to perform this on several holes with one file already loaded in.
+In theory, if one wanted to maximize efficiency, it would be possible to stack the commands in one tcl file and run that to perform this on several holes with one file already loaded in.
 ```
 # example.tcl
-holehelper no no no no "segname 0 1 2 3 4 5" "segname 0" "0 0 1" "simple2" no no testfolder
-holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder1
-holehelper no no no no "segname 6 7 8 9 10 11" "segname 6" "0 0 1" "simple2" no no testfolder2
+holehelper no no no no "segname 0 1 2 3 4 5" "segname 0" "0 0 1" "simple2" no no testfolder trimer1
+holehelper no no no no "segname 36 to 41 and not segname 4" no "0 0 1" "simple2" no no testfolder1 trimer2
+holehelper no no no no "segname 6 7 8 9 10 11" "segname 6" "0 0 1" "simple2" no no testfolder2 trimer3
 ```
-</del>
-This is currently being worked on; previous tests showed that hole can be run in parallel but I need to get it working with this workflow.
+File/folder names must not have spaces and should be using hyphens or underscores to connect them so no bugs or issues occur when running the program.  
+
+## License
+
