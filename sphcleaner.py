@@ -1,5 +1,6 @@
 import glob
-import subprocess
+import sys
+import os
 
 def readsphfile(sphfile): 
     '''
@@ -22,14 +23,9 @@ def readsphfile(sphfile):
     fi.close()
 
 def main():
-    user_name = subprocess.run(['whoami'],shell=True, capture_output=True,text=True)
-    readable_user_name = user_name.stdout
-    cleaned_user_name = readable_user_name.strip()
-    cli_func = subprocess.run([f'find /home/{cleaned_user_name} -type d -name "HH-Results" ! -path "/home/*/*.*"'],shell=True, capture_output=True,text=True)
-    sph_path = cli_func.stdout
-    sph_path = sph_path.strip()
-    sph_path += "/sph-folder/"
-    holelist = sorted(glob.glob(f'{sph_path}*.sph'))
+
+    os.chdir(f'{sys.argv[1]}/HH-Results/sph-folder')
+    holelist = sorted(glob.glob('*.sph'))
 
     for sphfile in holelist:
         readsphfile(sphfile)
