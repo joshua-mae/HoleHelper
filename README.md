@@ -1,5 +1,6 @@
 # HoleHelper
-
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) 
+</br>
 This is a quick and easy setup guide to get this plugin running along with a demo and photos.
 
 ## Installation 
