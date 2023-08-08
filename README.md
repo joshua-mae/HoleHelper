@@ -85,5 +85,9 @@ holehelper no no no no "segname 6 7 8 9 10 11" "segname 6" "0 0 1" "simple2" no 
 ```
 File/folder names must not have spaces and should be using hyphens or underscores to connect them so no bugs or issues occur when running the program.  
 
+## Acknowledgements (Citations work in progress)
+This program uses the HOLE2 program originally written by Oliver Smart and a file from `rad` folder in Lily Wang's MDAnalysis version for better calculations.
+
 ## License
+![License](https://github.com/joshua-mae/HoleHelper/blob/25d4763fa1e24126c30b030b59925db77133e2ca/LICENSE)
 
