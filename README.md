@@ -3,6 +3,8 @@
 </br>
 This is a quick and easy setup guide to get this plugin running along with a demo and photos.
 
+**Only works with x64 Linux based systems because HOLE2 has only been developed for x64 Linux, x32 and macOS do not seem to be coming soon at any time.**
+
 ## Installation 
 
 Install the plugin files by `git clone` or downloading the zip file.  Keep in the mind where you installed the plugin.
@@ -27,6 +29,8 @@ This plugin was made so users could utilize HOLE without having to go through th
 
 ## **GUI Version**
 This version is meant to only handle one "hole" in which the user can load it directly through the GUI or from a loaded molecule that is the top molecule in VMD.  Additionally, it does come with some other bells and whistles like seeing where the HOLE program will originate and an easier to follow workflow. 
+
+_**GUI version should work in any directory because when you select the files and output directory, you are giving the full path, so no issues should be here**_
 
 **Sections:** \
 **File Options:**
@@ -59,8 +63,10 @@ HH Results
 ## **CLI Version** 
 This version is the bare bones version that still only does one hole at a time but should be able to be put in a TCL script several times to calculate multiples holes at the same time. The CLI version can run multiple HOLE programs at the same time with knowledge of recent tests; the python version had issues with this so I was unsure. 
 
+_**This CLI version only works with files in the $HOME directory because this part uses a linux command to find the output directory and searching every directory would take too long (from what I have tested)**_
+
 **Sections:** \
-This version has the same layout as the GUI version except everything happens behind the hood but it essentially loads the molecule and does the operation on that given molecule
+This version has the same layout as the GUI version except everything happens behind the hood but it essentially loads the molecule and does the operation on that given molecule.  
 
 Here would be for a newly loaded molecule (File names must be unique or else the program will not work):
 ```
