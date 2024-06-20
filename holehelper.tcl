@@ -255,7 +255,7 @@ proc ::HOLEHelper::holehelper {} {
     grid columnconfigure $w 0 -weight 1
     grid rowconfigure $w 0 -weight 1
 
-    wm geometry $w 510x575
+    wm geometry $w 510x650
 
     set file_window $w.fileoptions
     ttk::labelframe $file_window -borderwidth 2 -relief ridge -text "File Options"
