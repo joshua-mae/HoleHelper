@@ -9,11 +9,11 @@ This is a quick and easy setup guide to get this plugin running along with a dem
 
 Install the plugin files by `git clone` or downloading the zip file.  Keep in the mind where you installed the plugin.
 
-The first line makes sure that the plugin is found/recognized when vmd is started; replace the path with where you put the plugin.  \
+Copy and paste these lines into your .vmdrc file.  The first line makes sure that the plugin is found/recognized when vmd is started; replace the path with where you put the plugin.
 The second line actually puts the plugin into the extension section of vmd in the "Analysis" section.
 ```
-lappend auto_path /home/josh/HoleHelper/
-vmd_install_extension HoleHelper holehelper_tk_cb Analysis/HoleHelper
+lappend auto_path /home/yourusername/HoleHelper/
+vmd_install_extension holehelper holehelper_tk_cb Analysis/HoleHelper
 ```
 For a quick sanity check, go to the TK console and input: `package require holehelper` \
 which should yield a version number if correctly installed.
