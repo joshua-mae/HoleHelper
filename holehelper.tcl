@@ -325,7 +325,7 @@ proc ::HOLEHelper::holehelper {} {
 	grid columnconfigure $mol_window.molsel 1 -weight 1
 	
     frame $mol_window.wrapping
-    grid [label $mol_window.wrapping.wraplabel -text "PBC Wraping Condition (Centersel): "] \
+    grid [label $mol_window.wrapping.wraplabel -text "PBC Wrapping Condition (Centersel): "] \
     -row 1 -column 0 -sticky e
     grid [entry $mol_window.wrapping.wrappath -textvariable \
     ::HOLEHelper::wrapping_condition -width 70 -justify left] -row 1 -column 1
