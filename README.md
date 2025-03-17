@@ -1,6 +1,6 @@
 # HoleHelper
 
-This is a quick and easy setup guide to get this plugin running along with a demo and photos.
+This is a quick and easy setup guide to get this plugin running.
 
 **Only works with x64 Linux based systems because HOLE2 has only been developed for x64 Linux, x32 and macOS do not seem to be coming soon at any time.**
 
@@ -91,6 +91,6 @@ holehelper no no no no "segname 6 7 8 9 10 11" "segname 6" "0 0 1" "simple2" no 
 ```
 File/folder names must not have spaces and should be using hyphens or underscores to connect them so no bugs or issues occur when running the program.  
 
-## Acknowledgements (Citations work in progress)
+## Acknowledgements
 This program uses the HOLE2 program originally written by Oliver Smart and a file from `rad` folder in Lily Wang's MDAnalysis version for better calculations.
 
